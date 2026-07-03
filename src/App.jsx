@@ -92,6 +92,8 @@ export default function REVOXAgent() {
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [newDeal, setNewDeal] = useState({ client: "", equipment: "", value: "", stage: "Prospecting", nextStep: "", issue: "" });
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [calendarConnected, setCalendarConnected] = useState(false);
+const [calendarEvents, setCalendarEvents] = useState([]);
   const messagesEndRef = useRef(null);
 
   const currentMessages = messages[activeModule] || [];
@@ -102,6 +104,15 @@ export default function REVOXAgent() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+  useEffect(() => {
+  fetch("https://revox-proxy.onrender.com/calendar/today")
+    .then(r => r.json())
+    .then(data => {
+      setCalendarConnected(data.connected);
+      setCalendarEvents(data.events || []);
+    })
+    .catch(() => {});
+}, []);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, activeModule]);
   useEffect(() => { try { localStorage.setItem("revox_messages", JSON.stringify(messages)); } catch {} }, [messages]);
@@ -213,6 +224,26 @@ export default function REVOXAgent() {
         ) : (
           <button onClick={() => setShowAddDeal(true)} style={{ width: "100%", padding: "9px", borderRadius: "10px", border: "1px dashed #1E2A3A", background: "transparent", color: "#475569", fontSize: "0.75rem", cursor: "pointer", marginTop: "4px" }}>+ Add New Deal</button>
         )}
+      </div>
+      {/* Calendar */}
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid #1E2A3A" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+          <div style={{ fontSize: "0.6rem", color: "#475569", letterSpacing: "1.5px", textTransform: "uppercase" }}>Today's Schedule</div>
+          {!calendarConnected && (
+            <a href="https://revox-proxy.onrender.com/auth/google" target="_blank" rel="noreferrer"
+              style={{ fontSize: "0.6rem", color: "#00C2A8", textDecoration: "none", border: "1px solid #00C2A830", padding: "3px 8px", borderRadius: "4px" }}>
+              Connect
+            </a>
+          )}
+        </div>
+        {!calendarConnected && <div style={{ fontSize: "0.7rem", color: "#475569" }}>Connect Google Calendar above.</div>}
+        {calendarConnected && calendarEvents.length === 0 && <div style={{ fontSize: "0.7rem", color: "#475569" }}>No meetings today 🎉</div>}
+        {calendarEvents.map((event, i) => (
+          <div key={i} style={{ marginBottom: "6px", padding: "8px", background: "#141C2E", borderRadius: "8px", borderLeft: "2px solid #00C2A8" }}>
+            <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "#E2E8F0" }}>{event.title}</div>
+            <div style={{ fontSize: "0.65rem", color: "#64748B" }}>{new Date(event.time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+          </div>
+        ))}
       </div>
 
       {/* Modules */}
