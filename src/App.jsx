@@ -187,7 +187,7 @@ export default function REVOXAgent() {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, activeModule]);
 
   useEffect(() => {
-    fetch("http://localhost:3001/calendar/today")
+    fetch("https://revox-proxy.onrender.com/calendar/today")
       .then(r => r.json())
       .then(data => { setCalendarConnected(data.connected); setCalendarEvents(data.events || []); })
       .catch(() => {});
@@ -211,7 +211,7 @@ export default function REVOXAgent() {
     setLoading(true);
     try {
       const apiMessages = updatedMsgs.map((m) => ({ role: m.role, content: m.content }));
-      const response = await fetch("http://localhost:3001/api/chat", {
+      const response = await fetch("https://revox-proxy.onrender.com/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 1000, system: MODULE_PROMPTS[activeModule], messages: apiMessages }),
@@ -350,7 +350,7 @@ export default function REVOXAgent() {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
               <div style={{ fontSize: "0.6rem", color: "#475569", letterSpacing: "1.5px", textTransform: "uppercase" }}>Today's Schedule</div>
               {!calendarConnected && (
-                <a href="http://localhost:3001/auth/google" target="_blank" rel="noreferrer"
+                <a href="https://revox-proxy.onrender.com/auth/google" target="_blank" rel="noreferrer"
                   style={{ fontSize: "0.6rem", color: "#00C2A8", textDecoration: "none", border: "1px solid #00C2A830", padding: "2px 6px", borderRadius: "4px" }}>
                   Connect
                 </a>
