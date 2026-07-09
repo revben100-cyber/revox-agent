@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 const MODULES = [
   { id: "daily", label: "Daily Brief", icon: "☀️", color: "#00C2A8" },
   { id: "analytics", label: "Analytics", icon: "📈", color: "#00C2A8" },
+  { id: "closing", label: "Closing Assistant", icon: "🏆", color: "#F59E0B" },
   { id: "deals", label: "Deal Tracker", icon: "📊", color: "#4F8EF7" },
   { id: "clients", label: "Clients", icon: "🏥", color: "#A78BFA" },
   { id: "contacts", label: "Contacts", icon: "👥", color: "#EC4899" },
@@ -31,48 +32,56 @@ const INITIAL_REMINDERS = [
   { id: 5, title: "KCMC — Final discount decision expected", client: "KCMC", type: "Negotiation", dueDate: new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0], priority: "High", done: false, dealId: 2 },
 ];
 
+const OBJECTIONS = [
+  { label: "Too expensive", icon: "💰", prompt: "Client says the price is too expensive. Give me a powerful objection handling script with ROI justification in TZS for biomedical equipment in Tanzania." },
+  { label: "Need to think", icon: "🤔", prompt: "Client says they need to think about it. Give me a script to create urgency and get a firm next step commitment without being pushy." },
+  { label: "10% discount", icon: "📉", prompt: "KCMC is requesting a 10% discount on TZS 95M surgical bundle. Give me a counter-offer strategy that preserves my margin while keeping the deal alive." },
+  { label: "Budget not approved", icon: "🏦", prompt: "Client says budget hasn't been approved yet. Give me strategies to keep momentum, suggest staged payment options, and navigate Tanzanian government hospital procurement." },
+  { label: "Comparing competitors", icon: "⚔️", prompt: "Client is comparing our biomedical equipment with competitors like Philips, Mindray, or GE. Give me a differentiation script that highlights our unique value." },
+  { label: "LPO delayed", icon: "📋", prompt: "Dr. Amara has verbally committed but the LPO is delayed. Give me a WhatsApp message and follow-up strategy to accelerate the LPO signing without pushing too hard." },
+];
+
+const CLOSING_SCRIPTS = [
+  { label: "Assumptive Close", icon: "✅", prompt: "Give me an assumptive close script for Dr. Amara Polyclinic — Lab Analyzer TZS 22M. Assume the deal is done and guide them to the next administrative step." },
+  { label: "Urgency Close", icon: "⏰", prompt: "Give me an urgency close script for the Amana Hospital deal — Ultrasound TZS 45M. Create legitimate urgency around pricing or stock availability." },
+  { label: "Summary Close", icon: "📝", prompt: "Give me a summary close script for KCMC — Surgical Bundle TZS 95M. Recap all the value we've agreed on before asking for the final commitment." },
+  { label: "LPO Guide", icon: "📄", prompt: "Walk me through how to guide Dr. Amara Polyclinic step by step through the LPO process for a TZS 22M lab analyzer purchase. Include what documents they need and timeline." },
+];
+
 const MODULE_PROMPTS = {
   daily: `You are REVOX, an elite AI Chief of Staff for Rev, a Biomedical Equipment Sales Representative based in Tanzania.
-
-Rev's current active deals:
-1. Amana Regional Referral Hospital — Portable Ultrasound + 2x Patient Monitors — TZS 45M (~$18K) — PROSPECTING — 30% close probability
-2. KCMC — Surgical Table + Anesthesia Machine bundle — TZS 95M (~$38K) — NEGOTIATION — 65% close probability
-3. Dr. Amara Polyclinic (Mabibo) — Laboratory Analyzer + Reagent Supply Contract — TZS 22M — CLOSING — 90% close probability
-
-Total pipeline: TZS 162,000,000 | Weighted forecast: TZS 88.3M
-
-Generate a DAILY BRIEF:
-1. 🎯 TOP 3 PRIORITIES TODAY
-2. 📋 PIPELINE SNAPSHOT
-3. 🔔 URGENT ALERTS
-4. 💡 ONE POWER MOVE
-
-Be specific. Use client names and TZS amounts. Sharp tone.`,
+Rev's deals: 1) Amana Hospital — Ultrasound + Monitors — TZS 45M — PROSPECTING 2) KCMC — Surgical Bundle — TZS 95M — NEGOTIATION (10% discount) 3) Dr. Amara — Lab Analyzer — TZS 22M — CLOSING (waiting LPO). Total: TZS 162M.
+Generate DAILY BRIEF: 🎯 TOP 3 PRIORITIES, 📋 PIPELINE SNAPSHOT, 🔔 URGENT ALERTS, 💡 ONE POWER MOVE. Sharp tone.`,
 
   analytics: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
+Pipeline: TZS 162M total, TZS 88.3M weighted. 3 deals: Amana TZS 45M (30%), KCMC TZS 95M (65%), Dr. Amara TZS 22M (90%).
+Provide revenue forecasting, pipeline velocity, deal health scores, territory performance, quarterly projections.`,
 
-Pipeline Analytics:
-- Total pipeline: TZS 162,000,000
-- Weighted forecast: TZS 88,300,000
-- Deal 1: Amana Hospital — TZS 45M — Prospecting — 30% probability
-- Deal 2: KCMC — TZS 95M — Negotiation — 65% probability  
-- Deal 3: Dr. Amara — TZS 22M — Closing — 90% probability
+  closing: `You are REVOX, an elite AI Sales Closing Coach for Rev, a Biomedical Equipment Sales Representative in Tanzania.
 
-When asked about analytics:
-- Revenue forecasting and pipeline velocity
-- Win rate analysis and deal health scores
-- Territory performance insights
-- Monthly/quarterly projections
-- Recommendations to improve pipeline metrics
-- Identify which deals to prioritize for maximum revenue impact
+Rev's deals:
+1. Dr. Amara Polyclinic (Mabibo) — Lab Analyzer + Reagent Supply Contract — TZS 22M — CLOSING — Verbal commitment. Waiting signed LPO. Dr. Amara is decision maker.
+2. KCMC — Surgical Table + Anesthesia Machine — TZS 95M — NEGOTIATION — 10% discount request (TZS 9.5M reduction). Follow-up call Monday.
+3. Amana Hospital — Ultrasound + Monitors — TZS 45M — PROSPECTING — Quotation not sent yet.
 
-Be data-driven and specific with TZS amounts.`,
+You are a world-class sales closing expert who understands:
+- Tanzanian hospital procurement processes (government, faith-based, private)
+- LPO (Local Purchase Order) processes in Tanzania
+- Biomedical equipment selling — clinical value, ROI, uptime guarantees
+- East African business culture — relationship-based, patience required
+
+Provide:
+- Objection handling scripts with exact words to say
+- Closing techniques (assumptive, urgency, summary, LPO guide)
+- Counter-offer strategies that preserve margin
+- WhatsApp closing messages
+- Pre-close checklists
+- Deal-specific tactics for each client
+
+Be tactical, specific, and confidence-building. Use TZS amounts. Never be generic.`,
 
   deals: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
-Active deals:
-1. Amana Hospital — Ultrasound + Monitors — TZS 45M — PROSPECTING
-2. KCMC — Surgical Table + Anesthesia Machine — TZS 95M — NEGOTIATION (10% discount request)
-3. Dr. Amara Polyclinic — Lab Analyzer + Reagents — TZS 22M — CLOSING (waiting LPO)
+Deals: Amana TZS 45M (Prospecting), KCMC TZS 95M (Negotiation — 10% discount), Dr. Amara TZS 22M (Closing — waiting LPO).
 Provide deal analysis, risk flags, negotiation tactics, close strategies.`,
 
   clients: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
@@ -81,15 +90,15 @@ Provide pre-call briefings, upsell opportunities, relationship strategies.`,
 
   contacts: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
 Contacts: Dr. Amara (Director), Procurement Officer (Amana), Procurement Team (KCMC).
-Generate WhatsApp messages, follow-up sequences, LPO reminders, closing messages. Professional warm Tanzanian tone.`,
+Generate WhatsApp messages, follow-up sequences, LPO reminders, closing messages.`,
 
   reminders: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
 Urgent: Chase Dr. Amara LPO, Send Amana quotation, KCMC follow-up Monday.
 Generate follow-up sequences, WhatsApp messages, weekly schedules, closing scripts.`,
 
   scaling: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
-Current territory: Dar es Salaam. Pipeline: TZS 162M.
-Provide territory expansion, NGO-funded opportunities, government tender strategies.`,
+Territory: Dar es Salaam. Pipeline: TZS 162M.
+Provide expansion plans, NGO-funded opportunities, government tender strategies.`,
 
   drafts: `You are REVOX, AI Chief of Staff for Rev, Biomedical Equipment Sales Rep in Tanzania.
 Draft quotation letters, WhatsApp messages, LinkedIn posts, LPO follow-ups. Professional warm Tanzanian tone.`,
@@ -98,6 +107,7 @@ Draft quotation letters, WhatsApp messages, LinkedIn posts, LPO follow-ups. Prof
 const QUICK_ACTIONS = {
   daily: ["Generate my morning brief", "What's my highest priority today?", "Show pipeline health", "Flag overdue follow-ups"],
   analytics: ["Analyze my pipeline health", "What's my weighted revenue forecast?", "Which deal should I prioritize?", "Give me a 30-day revenue projection"],
+  closing: ["Handle KCMC discount objection", "Generate closing script for Dr. Amara", "Pre-close checklist for Dr. Amara LPO", "Counter-offer script for KCMC 10% discount"],
   deals: ["Analyze my 3 current deals", "How do I handle KCMC discount?", "How to close Dr. Amara faster?", "Forecast this month's revenue"],
   clients: ["Prep me for KCMC Monday call", "Find upsell for Amana Hospital", "Draft LPO follow-up for Dr. Amara", "Build Amana client profile"],
   contacts: ["Draft WhatsApp for Dr. Amara LPO", "Write KCMC follow-up message", "Send quotation reminder to Amana", "Create 7-day follow-up sequence for Dr. Amara"],
@@ -111,7 +121,6 @@ const PRIORITY_COLORS = { Critical: "#F87171", High: "#F59E0B", Medium: "#4F8EF7
 const REMINDER_TYPES = ["Follow-up", "LPO Chase", "Quotation", "Negotiation", "Payment", "Installation", "Other"];
 const ROLES = ["Procurement Officer", "Biomedical Engineer", "Director / Decision Maker", "Hospital Administrator", "Finance Officer", "Other"];
 
-// Simple bar chart component
 const BarChart = ({ data, maxVal, color, label }) => (
   <div style={{ marginBottom: "16px" }}>
     <div style={{ fontSize: "0.65rem", color: "#64748B", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "1px" }}>{label}</div>
@@ -122,22 +131,18 @@ const BarChart = ({ data, maxVal, color, label }) => (
           <span style={{ fontSize: "0.72rem", color: item.color || color, fontWeight: 600 }}>{item.display}</span>
         </div>
         <div style={{ height: "6px", background: "#1E2A3A", borderRadius: "3px", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${(item.value / maxVal) * 100}%`, background: item.color || color, borderRadius: "3px", transition: "width 0.8s ease" }} />
+          <div style={{ height: "100%", width: `${(item.value / maxVal) * 100}%`, background: item.color || color, borderRadius: "3px" }} />
         </div>
       </div>
     ))}
   </div>
 );
 
-// Donut chart component
 const DonutChart = ({ segments, size = 120 }) => {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   let offset = 0;
-  const r = 40;
-  const cx = size / 2;
-  const cy = size / 2;
+  const r = 40, cx = size / 2, cy = size / 2;
   const circumference = 2 * Math.PI * r;
-
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       {segments.map((seg, i) => {
@@ -146,14 +151,7 @@ const DonutChart = ({ segments, size = 120 }) => {
         const gap = circumference - dash;
         const rotation = offset * 360 - 90;
         offset += pct;
-        return (
-          <circle key={i} cx={cx} cy={cy} r={r}
-            fill="none" stroke={seg.color} strokeWidth="16"
-            strokeDasharray={`${dash} ${gap}`}
-            transform={`rotate(${rotation} ${cx} ${cy})`}
-            style={{ transition: "stroke-dasharray 0.8s ease" }}
-          />
-        );
+        return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color} strokeWidth="16" strokeDasharray={`${dash} ${gap}`} transform={`rotate(${rotation} ${cx} ${cy})`} />;
       })}
       <text x={cx} y={cy - 6} textAnchor="middle" fill="#F1F5F9" fontSize="12" fontWeight="700">TZS</text>
       <text x={cx} y={cy + 10} textAnchor="middle" fill="#F1F5F9" fontSize="11" fontWeight="700">162M</text>
@@ -161,50 +159,31 @@ const DonutChart = ({ segments, size = 120 }) => {
   );
 };
 
-// Analytics Dashboard Component
 const AnalyticsDashboard = ({ deals, reminders }) => {
   const totalPipeline = deals.reduce((s, d) => s + (d.valueNum || 0), 0);
   const weightedForecast = deals.reduce((s, d) => s + ((d.valueNum || 0) * (d.closeProbability || 50) / 100), 0);
   const doneReminders = reminders.filter(r => r.done).length;
-  const totalReminders = reminders.length;
-
   const stageData = [
     { label: "Prospecting", value: deals.filter(d => d.stage === "Prospecting").reduce((s, d) => s + (d.valueNum || 0), 0), color: "#F59E0B", display: `TZS ${(deals.filter(d => d.stage === "Prospecting").reduce((s, d) => s + (d.valueNum || 0), 0) / 1000000).toFixed(0)}M` },
     { label: "Negotiation", value: deals.filter(d => d.stage === "Negotiation").reduce((s, d) => s + (d.valueNum || 0), 0), color: "#4F8EF7", display: `TZS ${(deals.filter(d => d.stage === "Negotiation").reduce((s, d) => s + (d.valueNum || 0), 0) / 1000000).toFixed(0)}M` },
     { label: "Closing", value: deals.filter(d => d.stage === "Closing").reduce((s, d) => s + (d.valueNum || 0), 0), color: "#34D399", display: `TZS ${(deals.filter(d => d.stage === "Closing").reduce((s, d) => s + (d.valueNum || 0), 0) / 1000000).toFixed(0)}M` },
   ];
-
-  const dealData = deals.map(d => ({
-    label: d.client.split(" ").slice(0, 2).join(" "),
-    value: d.valueNum || 0,
-    color: d.stageColor,
-    display: `TZS ${((d.valueNum || 0) / 1000000).toFixed(0)}M`,
-  }));
-
-  const probabilityData = deals.map(d => ({
-    label: d.client.split(" ").slice(0, 2).join(" "),
-    value: d.closeProbability || 50,
-    color: d.stageColor,
-    display: `${d.closeProbability}%`,
-  }));
+  const dealData = deals.map(d => ({ label: d.client.split(" ").slice(0, 2).join(" "), value: d.valueNum || 0, color: d.stageColor, display: `TZS ${((d.valueNum || 0) / 1000000).toFixed(0)}M` }));
+  const probabilityData = deals.map(d => ({ label: d.client.split(" ").slice(0, 2).join(" "), value: d.closeProbability || 50, color: d.stageColor, display: `${d.closeProbability}%` }));
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
       <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-
-        {/* Header */}
         <div style={{ marginBottom: "24px" }}>
           <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#F1F5F9", marginBottom: "4px" }}>📈 Pipeline Analytics</div>
           <div style={{ fontSize: "0.75rem", color: "#475569" }}>Live dashboard — Tanzania Biomedical Equipment Sales</div>
         </div>
-
-        {/* KPI Cards */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "12px", marginBottom: "24px" }}>
           {[
             { label: "Total Pipeline", value: `TZS ${(totalPipeline / 1000000).toFixed(0)}M`, sub: `${deals.length} active deals`, color: "#00C2A8", icon: "💰" },
             { label: "Weighted Forecast", value: `TZS ${(weightedForecast / 1000000).toFixed(1)}M`, sub: "by close probability", color: "#4F8EF7", icon: "🎯" },
             { label: "Closing Soon", value: `TZS ${(deals.filter(d => d.stage === "Closing").reduce((s, d) => s + (d.valueNum || 0), 0) / 1000000).toFixed(0)}M`, sub: `${deals.filter(d => d.stage === "Closing").length} deal(s)`, color: "#34D399", icon: "🏆" },
-            { label: "Tasks Done", value: `${doneReminders}/${totalReminders}`, sub: "reminders completed", color: "#A78BFA", icon: "✅" },
+            { label: "Tasks Done", value: `${doneReminders}/${reminders.length}`, sub: "reminders completed", color: "#A78BFA", icon: "✅" },
           ].map((kpi, i) => (
             <div key={i} style={{ background: "#141C2E", borderRadius: "12px", padding: "14px", border: `1px solid ${kpi.color}30` }}>
               <div style={{ fontSize: "1.4rem", marginBottom: "6px" }}>{kpi.icon}</div>
@@ -214,11 +193,7 @@ const AnalyticsDashboard = ({ deals, reminders }) => {
             </div>
           ))}
         </div>
-
-        {/* Charts Row */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
-
-          {/* Donut + Stage breakdown */}
           <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #1E2A3A" }}>
             <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Pipeline by Stage</div>
             <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -234,19 +209,13 @@ const AnalyticsDashboard = ({ deals, reminders }) => {
               </div>
             </div>
           </div>
-
-          {/* Close Probability */}
           <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #1E2A3A" }}>
             <BarChart data={probabilityData} maxVal={100} color="#00C2A8" label="Close Probability %" />
           </div>
         </div>
-
-        {/* Deal Value Chart */}
         <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #1E2A3A", marginBottom: "20px" }}>
           <BarChart data={dealData} maxVal={Math.max(...dealData.map(d => d.value))} color="#4F8EF7" label="Deal Value by Client" />
         </div>
-
-        {/* Deal Health Scorecards */}
         <div style={{ marginBottom: "20px" }}>
           <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "12px" }}>Deal Health Scores</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "12px" }}>
@@ -263,7 +232,7 @@ const AnalyticsDashboard = ({ deals, reminders }) => {
                     <span style={{ fontSize: "0.72rem", color: deal.stageColor, fontWeight: 600 }}>{deal.stage}</span>
                     <span style={{ fontSize: "0.72rem", color: "#94A3B8" }}>{deal.value}</span>
                   </div>
-                  <div style={{ marginBottom: "4px" }}>
+                  <div>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
                       <span style={{ fontSize: "0.62rem", color: "#64748B" }}>Close probability</span>
                       <span style={{ fontSize: "0.62rem", color: health.color, fontWeight: 700 }}>{deal.closeProbability}%</span>
@@ -278,8 +247,6 @@ const AnalyticsDashboard = ({ deals, reminders }) => {
             })}
           </div>
         </div>
-
-        {/* Revenue Projection */}
         <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #1E2A3A" }}>
           <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "16px" }}>Revenue Scenarios</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
@@ -296,6 +263,104 @@ const AnalyticsDashboard = ({ deals, reminders }) => {
             ))}
           </div>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// CLOSING ASSISTANT DASHBOARD
+const ClosingDashboard = ({ deals, onSendMessage, setActiveModule }) => {
+  const closingDeals = deals.filter(d => d.stage === "Closing" || d.stage === "Negotiation");
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
+      <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: "24px" }}>
+          <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#F1F5F9", marginBottom: "4px" }}>🏆 Closing Assistant</div>
+          <div style={{ fontSize: "0.75rem", color: "#475569" }}>Objection handling · Closing scripts · Deal tactics</div>
+        </div>
+
+        {/* Deal Status */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "24px" }}>
+          {closingDeals.map((deal, i) => (
+            <div key={i} style={{ background: "#141C2E", borderRadius: "12px", padding: "14px", border: `1px solid ${deal.stageColor}40` }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span style={{ fontSize: "0.65rem", color: deal.stageColor, fontWeight: 700, background: `${deal.stageColor}18`, padding: "2px 8px", borderRadius: "4px" }}>{deal.stage}</span>
+                <span style={{ fontSize: "0.65rem", color: "#64748B" }}>{deal.closeProbability}% close</span>
+              </div>
+              <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#F1F5F9", marginBottom: "4px", lineHeight: 1.3 }}>{deal.client.split("(")[0].trim()}</div>
+              <div style={{ fontSize: "0.7rem", fontWeight: 700, color: deal.stageColor }}>{deal.value}</div>
+              <div style={{ fontSize: "0.65rem", color: "#475569", marginTop: "6px", lineHeight: 1.4 }}>→ {deal.nextStep}</div>
+              <button onClick={() => onSendMessage(`Generate a complete closing strategy for ${deal.client} — ${deal.equipment} worth ${deal.value}. They are in ${deal.stage} stage. Issue: ${deal.issue}. Give me specific tactics to close this deal now.`)}
+                style={{ width: "100%", padding: "7px", borderRadius: "8px", border: `1px solid ${deal.stageColor}`, background: "transparent", color: deal.stageColor, fontSize: "0.7rem", cursor: "pointer", marginTop: "10px", fontWeight: 600 }}>
+                🏆 Close This Deal
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Objection Handler */}
+        <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #1E2A3A", marginBottom: "20px" }}>
+          <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "14px" }}>⚡ Objection Handler</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            {OBJECTIONS.map((obj, i) => (
+              <button key={i} onClick={() => onSendMessage(obj.prompt)} style={{
+                padding: "12px", borderRadius: "10px", border: "1px solid #1E2A3A",
+                background: "#0F1422", color: "#CBD5E1", fontSize: "0.78rem",
+                cursor: "pointer", textAlign: "left", lineHeight: 1.4,
+                display: "flex", alignItems: "center", gap: "8px",
+              }}>
+                <span style={{ fontSize: "1.1rem" }}>{obj.icon}</span>
+                <span>{obj.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Closing Scripts */}
+        <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #1E2A3A", marginBottom: "20px" }}>
+          <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "14px" }}>📋 Closing Scripts</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            {CLOSING_SCRIPTS.map((script, i) => (
+              <button key={i} onClick={() => onSendMessage(script.prompt)} style={{
+                padding: "12px", borderRadius: "10px", border: "1px solid #F59E0B30",
+                background: "#F59E0B08", color: "#CBD5E1", fontSize: "0.78rem",
+                cursor: "pointer", textAlign: "left", lineHeight: 1.4,
+                display: "flex", alignItems: "center", gap: "8px",
+              }}>
+                <span style={{ fontSize: "1.1rem" }}>{script.icon}</span>
+                <span>{script.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Pre-Close Checklist */}
+        <div style={{ background: "#141C2E", borderRadius: "12px", padding: "16px", border: "1px solid #34D39930" }}>
+          <div style={{ fontSize: "0.72rem", color: "#64748B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "14px" }}>✅ Pre-Close Checklist — Dr. Amara Polyclinic</div>
+          {[
+            { item: "Decision maker confirmed (Dr. Amara)", done: true },
+            { item: "Technical specs accepted", done: true },
+            { item: "Price agreed (TZS 22,000,000)", done: true },
+            { item: "Verbal commitment received", done: true },
+            { item: "LPO signed and received", done: false },
+            { item: "Payment terms confirmed", done: false },
+            { item: "Installation date scheduled", done: false },
+          ].map((check, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px 0", borderBottom: i < 6 ? "1px solid #1E2A3A" : "none" }}>
+              <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: check.done ? "#34D399" : "#1E2A3A", border: check.done ? "none" : "2px solid #475569", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                {check.done && <span style={{ fontSize: "10px", color: "#0B0F1A" }}>✓</span>}
+              </div>
+              <span style={{ fontSize: "0.78rem", color: check.done ? "#34D399" : "#CBD5E1", textDecoration: check.done ? "none" : "none" }}>{check.item}</span>
+            </div>
+          ))}
+          <button onClick={() => onSendMessage("Give me specific tactics to get Dr. Amara to sign the LPO and clear payment for the TZS 22M lab analyzer deal this week.")}
+            style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "none", background: "#34D399", color: "#0B0F1A", fontSize: "0.8rem", cursor: "pointer", marginTop: "14px", fontWeight: 700 }}>
+            🏆 Get Closing Tactics for Remaining Items
+          </button>
+        </div>
 
       </div>
     </div>
@@ -303,7 +368,7 @@ const AnalyticsDashboard = ({ deals, reminders }) => {
 };
 
 export default function REVOXAgent() {
-  const [activeModule, setActiveModule] = useState("analytics");
+  const [activeModule, setActiveModule] = useState("closing");
   const [messages, setMessages] = useState(() => { try { const s = localStorage.getItem("revox_messages"); return s ? JSON.parse(s) : {}; } catch { return {}; } });
   const [deals, setDeals] = useState(() => { try { const s = localStorage.getItem("revox_deals"); return s ? JSON.parse(s) : INITIAL_DEALS; } catch { return INITIAL_DEALS; } });
   const [contacts, setContacts] = useState(() => { try { const s = localStorage.getItem("revox_contacts"); return s ? JSON.parse(s) : INITIAL_CONTACTS; } catch { return INITIAL_CONTACTS; } });
@@ -359,7 +424,7 @@ export default function REVOXAgent() {
     setInput("");
     if (isMobile) setView("chat");
     const userMsg = { role: "user", content: userText };
-    const updatedMsgs = [...currentMessages, userMsg];
+    const updatedMsgs = [...(messages[activeModule] || []), userMsg];
     setMessages((prev) => ({ ...prev, [activeModule]: updatedMsgs }));
     setLoading(true);
     try {
@@ -408,28 +473,23 @@ export default function REVOXAgent() {
 
   const generateFollowUpSequence = (contact) => {
     const deal = deals.find(d => d.id === contact.dealId);
-    const prompt = `Generate a complete WhatsApp follow-up sequence for ${contact.name} at ${contact.hospital}. ${deal ? `Deal: ${deal.equipment} worth ${deal.value} — currently ${deal.stage}. Next step: ${deal.nextStep}` : ""}. Create Day 1, Day 3, Day 7, Day 14 messages. Each under 100 words. Professional warm Tanzanian tone.`;
+    sendMessage(`Generate a complete WhatsApp follow-up sequence for ${contact.name} at ${contact.hospital}. ${deal ? `Deal: ${deal.equipment} worth ${deal.value} — ${deal.stage}. Next step: ${deal.nextStep}` : ""}. Create Day 1, Day 3, Day 7, Day 14 messages. Each under 100 words.`);
     setActiveModule("reminders");
     if (isMobile) setView("chat");
-    sendMessage(prompt);
   };
 
   const openWhatsApp = (phone, name) => {
-    const message = encodeURIComponent(`Dear ${name}, `);
-    window.open(phone ? `https://wa.me/${phone.replace(/\D/g, "")}?text=${message}` : `https://wa.me/?text=${message}`, "_blank");
+    window.open(phone ? `https://wa.me/${phone.replace(/\D/g, "")}?text=${encodeURIComponent(`Dear ${name}, `)}` : `https://wa.me/?text=${encodeURIComponent(`Dear ${name}, `)}`, "_blank");
   };
 
   const draftWhatsApp = (contact) => {
     const deal = deals.find(d => d.id === contact.dealId);
-    sendMessage(`Draft a short professional WhatsApp follow-up message for ${contact.name} at ${contact.hospital}. ${deal ? `Deal: ${deal.equipment} worth ${deal.value} — ${deal.stage}. Next step: ${deal.nextStep}` : ""}. Under 100 words, warm professional tone.`);
+    sendMessage(`Draft a short professional WhatsApp follow-up for ${contact.name} at ${contact.hospital}. ${deal ? `Deal: ${deal.equipment} worth ${deal.value} — ${deal.stage}. Next step: ${deal.nextStep}` : ""}. Under 100 words, warm professional tone.`);
     setActiveModule("contacts");
     if (isMobile) setView("chat");
   };
 
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    c.hospital.toLowerCase().includes(contactSearch.toLowerCase())
-  );
+  const filteredContacts = contacts.filter(c => c.name.toLowerCase().includes(contactSearch.toLowerCase()) || c.hospital.toLowerCase().includes(contactSearch.toLowerCase()));
 
   const formatMessage = (text) => text.split("\n").map((line, i) => {
     if (line.startsWith("# ") || line.startsWith("## ") || line.startsWith("### "))
@@ -456,11 +516,10 @@ export default function REVOXAgent() {
             <div style={{ fontSize: "0.65rem", color: "#64748B", paddingLeft: "20px" }}>{reminder.client}</div>
             <div style={{ display: "flex", gap: "6px", marginTop: "4px", paddingLeft: "20px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "0.6rem", color: PRIORITY_COLORS[reminder.priority], background: `${PRIORITY_COLORS[reminder.priority]}18`, padding: "2px 6px", borderRadius: "4px" }}>{reminder.priority}</span>
-              <span style={{ fontSize: "0.6rem", color: "#64748B", background: "#1E2A3A", padding: "2px 6px", borderRadius: "4px" }}>{reminder.type}</span>
               <span style={{ fontSize: "0.6rem", color: isOverdue ? "#F87171" : isToday ? "#F59E0B" : "#64748B" }}>{isOverdue ? "⚠️ Overdue" : isToday ? "📅 Today" : reminder.dueDate}</span>
             </div>
           </div>
-          <button onClick={() => deleteReminder(reminder.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "0.65rem", flexShrink: 0 }}>✕</button>
+          <button onClick={() => deleteReminder(reminder.id)} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "0.65rem" }}>✕</button>
         </div>
         {!reminder.done && (
           <button onClick={() => { const c = contacts.find(c => c.dealId === reminder.dealId); if (c) draftWhatsApp(c); else sendMessage(`Draft WhatsApp for ${reminder.client}: ${reminder.title}`); }}
@@ -496,19 +555,15 @@ export default function REVOXAgent() {
             <div style={{ fontSize: "0.58rem", color: "#64748B" }}>Pipeline</div>
           </div>
           <div style={{ background: "#141C2E", borderRadius: "8px", padding: "8px", textAlign: "center" }}>
-            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#34D399" }}>{deals.length}</div>
-            <div style={{ fontSize: "0.58rem", color: "#64748B" }}>Deals</div>
+            <div style={{ fontSize: "1rem", fontWeight: 700, color: "#F59E0B" }}>🏆</div>
+            <div style={{ fontSize: "0.58rem", color: "#64748B" }}>Closing</div>
           </div>
         </div>
       </div>
 
       <div style={{ display: "flex", padding: "10px 16px", gap: "6px", borderBottom: "1px solid #1E2A3A", flexShrink: 0 }}>
         {["reminders", "deals", "contacts"].map(tab => (
-          <button key={tab} onClick={() => setSidebarTab(tab)} style={{
-            flex: 1, padding: "6px 4px", borderRadius: "8px", border: "none", cursor: "pointer",
-            background: sidebarTab === tab ? (tab === "reminders" ? "#F87171" : tab === "deals" ? "#4F8EF7" : "#EC4899") : "#141C2E",
-            color: sidebarTab === tab ? "#fff" : "#64748B", fontSize: "0.65rem", fontWeight: 600,
-          }}>
+          <button key={tab} onClick={() => setSidebarTab(tab)} style={{ flex: 1, padding: "6px 4px", borderRadius: "8px", border: "none", cursor: "pointer", background: sidebarTab === tab ? (tab === "reminders" ? "#F87171" : tab === "deals" ? "#4F8EF7" : "#EC4899") : "#141C2E", color: sidebarTab === tab ? "#fff" : "#64748B", fontSize: "0.65rem", fontWeight: 600 }}>
             {tab === "reminders" ? "🔔" : tab === "deals" ? "📊" : "👥"} {tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
@@ -519,7 +574,7 @@ export default function REVOXAgent() {
           <div style={{ display: "flex", gap: "4px", marginBottom: "10px", flexWrap: "wrap" }}>
             {["all", "today", "overdue", "upcoming"].map(f => (
               <button key={f} onClick={() => setReminderFilter(f)} style={{ padding: "4px 8px", borderRadius: "6px", border: "none", cursor: "pointer", fontSize: "0.62rem", background: reminderFilter === f ? "#F87171" : "#141C2E", color: reminderFilter === f ? "#fff" : "#64748B" }}>
-                {f === "overdue" ? `⚠️ Overdue (${overdueReminders.length})` : f === "today" ? `📅 Today (${todayReminders.length})` : f === "upcoming" ? `📆 Upcoming (${upcomingReminders.length})` : `All (${reminders.filter(r => !r.done).length})`}
+                {f === "overdue" ? `⚠️ (${overdueReminders.length})` : f === "today" ? `📅 (${todayReminders.length})` : f === "upcoming" ? `📆 (${upcomingReminders.length})` : `All`}
               </button>
             ))}
           </div>
@@ -529,14 +584,13 @@ export default function REVOXAgent() {
           {doneReminders.length > 0 && (<><div style={{ fontSize: "0.6rem", color: "#34D399", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>✅ Done ({doneReminders.length})</div>{doneReminders.slice(0, 2).map(r => <ReminderCard key={r.id} reminder={r} />)}</>)}
           {showAddReminder ? (
             <div style={{ background: "#141C2E", borderRadius: "10px", padding: "12px", border: "1px solid #F87171" }}>
-              <input placeholder="Reminder title *" value={newReminder.title} onChange={e => setNewReminder(p => ({ ...p, title: e.target.value }))} style={inputStyle} />
-              <input placeholder="Client name *" value={newReminder.client} onChange={e => setNewReminder(p => ({ ...p, client: e.target.value }))} style={inputStyle} />
+              <input placeholder="Title *" value={newReminder.title} onChange={e => setNewReminder(p => ({ ...p, title: e.target.value }))} style={inputStyle} />
+              <input placeholder="Client *" value={newReminder.client} onChange={e => setNewReminder(p => ({ ...p, client: e.target.value }))} style={inputStyle} />
               <select value={newReminder.type} onChange={e => setNewReminder(p => ({ ...p, type: e.target.value }))} style={{ ...inputStyle }}>{REMINDER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select>
               <select value={newReminder.priority} onChange={e => setNewReminder(p => ({ ...p, priority: e.target.value }))} style={{ ...inputStyle }}>{["Critical", "High", "Medium", "Low"].map(p => <option key={p} value={p}>{p}</option>)}</select>
-              <input type="date" value={newReminder.dueDate} onChange={e => setNewReminder(p => ({ ...p, dueDate: e.target.value }))} style={{ ...inputStyle }} />
-              <select value={newReminder.dealId} onChange={e => setNewReminder(p => ({ ...p, dealId: parseInt(e.target.value) }))} style={{ ...inputStyle, marginBottom: "10px" }}><option value="">Link to deal (optional)</option>{deals.map(d => <option key={d.id} value={d.id}>{d.client}</option>)}</select>
+              <input type="date" value={newReminder.dueDate} onChange={e => setNewReminder(p => ({ ...p, dueDate: e.target.value }))} style={{ ...inputStyle, marginBottom: "10px" }} />
               <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={addReminder} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#F87171", color: "#fff", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Add</button>
+                <button onClick={addReminder} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#F87171", color: "#fff", fontSize: "0.78rem", cursor: "pointer" }}>Add</button>
                 <button onClick={() => setShowAddReminder(false)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #1E2A3A", background: "transparent", color: "#64748B", fontSize: "0.78rem", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
@@ -559,18 +613,17 @@ export default function REVOXAgent() {
                 <span style={{ fontSize: "0.68rem", color: deal.stageColor, fontWeight: 600, background: `${deal.stageColor}18`, padding: "2px 6px", borderRadius: "4px" }}>{deal.stage}</span>
                 <span style={{ fontSize: "0.68rem", color: "#94A3B8" }}>{deal.value}</span>
               </div>
-              {deal.nextStep && <div style={{ fontSize: "0.65rem", color: "#475569", marginTop: "6px", borderTop: "1px solid #1E2A3A", paddingTop: "6px" }}>→ {deal.nextStep}</div>}
             </div>
           ))}
           {showAddDeal ? (
             <div style={{ background: "#141C2E", borderRadius: "10px", padding: "12px", border: "1px solid #1E2A3A" }}>
               <input placeholder="Client name *" value={newDeal.client} onChange={e => setNewDeal(p => ({ ...p, client: e.target.value }))} style={inputStyle} />
               <input placeholder="Equipment *" value={newDeal.equipment} onChange={e => setNewDeal(p => ({ ...p, equipment: e.target.value }))} style={inputStyle} />
-              <input placeholder="Value (e.g. TZS 20,000,000)" value={newDeal.value} onChange={e => setNewDeal(p => ({ ...p, value: e.target.value }))} style={inputStyle} />
+              <input placeholder="Value (TZS)" value={newDeal.value} onChange={e => setNewDeal(p => ({ ...p, value: e.target.value }))} style={inputStyle} />
               <select value={newDeal.stage} onChange={e => setNewDeal(p => ({ ...p, stage: e.target.value }))} style={{ ...inputStyle }}>{Object.keys(STAGE_COLORS).map(s => <option key={s} value={s}>{s}</option>)}</select>
               <input placeholder="Next step" value={newDeal.nextStep} onChange={e => setNewDeal(p => ({ ...p, nextStep: e.target.value }))} style={inputStyle} />
               <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={addDeal} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#00C2A8", color: "#fff", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Add Deal</button>
+                <button onClick={addDeal} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#00C2A8", color: "#fff", fontSize: "0.78rem", cursor: "pointer" }}>Add Deal</button>
                 <button onClick={() => setShowAddDeal(false)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #1E2A3A", background: "transparent", color: "#64748B", fontSize: "0.78rem", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
@@ -582,7 +635,7 @@ export default function REVOXAgent() {
 
       {sidebarTab === "contacts" && (
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #1E2A3A", flexShrink: 0 }}>
-          <input placeholder="🔍 Search contacts..." value={contactSearch} onChange={e => setContactSearch(e.target.value)} style={{ ...inputStyle, marginBottom: "10px" }} />
+          <input placeholder="🔍 Search..." value={contactSearch} onChange={e => setContactSearch(e.target.value)} style={{ ...inputStyle, marginBottom: "10px" }} />
           {filteredContacts.map((contact) => (
             <div key={contact.id} style={{ marginBottom: "8px", padding: "10px", background: "#141C2E", borderRadius: "10px", borderLeft: "3px solid #EC4899" }}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -593,9 +646,8 @@ export default function REVOXAgent() {
                 </div>
                 <button onClick={() => setContacts(p => p.filter(c => c.id !== contact.id))} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: "0.7rem" }}>✕</button>
               </div>
-              {contact.notes && <div style={{ fontSize: "0.65rem", color: "#475569", marginTop: "4px", borderTop: "1px solid #1E2A3A", paddingTop: "4px" }}>{contact.notes}</div>}
               <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
-                <button onClick={() => openWhatsApp(contact.phone, contact.name)} style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "none", background: "#25D366", color: "#fff", fontSize: "0.65rem", cursor: "pointer", fontWeight: 600 }}>💬 WhatsApp</button>
+                <button onClick={() => openWhatsApp(contact.phone, contact.name)} style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "none", background: "#25D366", color: "#fff", fontSize: "0.65rem", cursor: "pointer" }}>💬 WhatsApp</button>
                 <button onClick={() => draftWhatsApp(contact)} style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "1px solid #EC4899", background: "transparent", color: "#EC4899", fontSize: "0.65rem", cursor: "pointer" }}>✍️ Draft</button>
                 <button onClick={() => generateFollowUpSequence(contact)} style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "1px solid #4F8EF7", background: "transparent", color: "#4F8EF7", fontSize: "0.65rem", cursor: "pointer" }}>📅 Seq</button>
               </div>
@@ -604,18 +656,18 @@ export default function REVOXAgent() {
           {showAddContact ? (
             <div style={{ background: "#141C2E", borderRadius: "10px", padding: "12px", border: "1px solid #EC4899", marginTop: "8px" }}>
               <input placeholder="Full name *" value={newContact.name} onChange={e => setNewContact(p => ({ ...p, name: e.target.value }))} style={inputStyle} />
-              <input placeholder="Hospital / Clinic *" value={newContact.hospital} onChange={e => setNewContact(p => ({ ...p, hospital: e.target.value }))} style={inputStyle} />
+              <input placeholder="Hospital *" value={newContact.hospital} onChange={e => setNewContact(p => ({ ...p, hospital: e.target.value }))} style={inputStyle} />
               <select value={newContact.role} onChange={e => setNewContact(p => ({ ...p, role: e.target.value }))} style={{ ...inputStyle }}>{ROLES.map(r => <option key={r} value={r}>{r}</option>)}</select>
-              <input placeholder="WhatsApp (e.g. 255712345678)" value={newContact.phone} onChange={e => setNewContact(p => ({ ...p, phone: e.target.value }))} style={inputStyle} />
-              <select value={newContact.dealId} onChange={e => setNewContact(p => ({ ...p, dealId: parseInt(e.target.value) }))} style={{ ...inputStyle }}><option value="">Link to deal (optional)</option>{deals.map(d => <option key={d.id} value={d.id}>{d.client}</option>)}</select>
+              <input placeholder="WhatsApp (255712345678)" value={newContact.phone} onChange={e => setNewContact(p => ({ ...p, phone: e.target.value }))} style={inputStyle} />
+              <select value={newContact.dealId} onChange={e => setNewContact(p => ({ ...p, dealId: parseInt(e.target.value) }))} style={{ ...inputStyle }}><option value="">Link to deal</option>{deals.map(d => <option key={d.id} value={d.id}>{d.client}</option>)}</select>
               <textarea placeholder="Notes..." value={newContact.notes} onChange={e => setNewContact(p => ({ ...p, notes: e.target.value }))} style={{ ...inputStyle, resize: "none", height: "60px", marginBottom: "10px" }} />
               <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={addContact} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#EC4899", color: "#fff", fontSize: "0.78rem", cursor: "pointer", fontWeight: 600 }}>Add Contact</button>
+                <button onClick={addContact} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#EC4899", color: "#fff", fontSize: "0.78rem", cursor: "pointer" }}>Add</button>
                 <button onClick={() => setShowAddContact(false)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "1px solid #1E2A3A", background: "transparent", color: "#64748B", fontSize: "0.78rem", cursor: "pointer" }}>Cancel</button>
               </div>
             </div>
           ) : (
-            <button onClick={() => setShowAddContact(true)} style={{ width: "100%", padding: "9px", borderRadius: "10px", border: "1px dashed #EC4899", background: "transparent", color: "#EC4899", fontSize: "0.75rem", cursor: "pointer", marginTop: "8px" }}>+ Add New Contact</button>
+            <button onClick={() => setShowAddContact(true)} style={{ width: "100%", padding: "9px", borderRadius: "10px", border: "1px dashed #EC4899", background: "transparent", color: "#EC4899", fontSize: "0.75rem", cursor: "pointer", marginTop: "8px" }}>+ Add Contact</button>
           )}
         </div>
       )}
@@ -638,18 +690,10 @@ export default function REVOXAgent() {
       <div style={{ padding: "12px 10px", flex: 1 }}>
         <div style={{ fontSize: "0.6rem", color: "#475569", letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: "8px", paddingLeft: "6px" }}>Modules</div>
         {MODULES.map((mod) => (
-          <button key={mod.id} onClick={() => { setActiveModule(mod.id); if (isMobile) setView("chat"); }} style={{
-            display: "flex", alignItems: "center", gap: "12px", width: "100%", padding: "11px 12px", borderRadius: "10px",
-            border: "none", cursor: "pointer", marginBottom: "3px",
-            background: activeModule === mod.id ? `${mod.color}18` : "transparent",
-            borderLeft: activeModule === mod.id ? `3px solid ${mod.color}` : "3px solid transparent",
-            transition: "all 0.15s", textAlign: "left",
-          }}>
+          <button key={mod.id} onClick={() => { setActiveModule(mod.id); if (isMobile) setView("chat"); }} style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", padding: "11px 12px", borderRadius: "10px", border: "none", cursor: "pointer", marginBottom: "3px", background: activeModule === mod.id ? `${mod.color}18` : "transparent", borderLeft: activeModule === mod.id ? `3px solid ${mod.color}` : "3px solid transparent", transition: "all 0.15s", textAlign: "left" }}>
             <span style={{ fontSize: "1.2rem" }}>{mod.icon}</span>
             <span style={{ fontSize: "0.88rem", fontWeight: activeModule === mod.id ? 600 : 400, color: activeModule === mod.id ? "#F1F5F9" : "#64748B" }}>{mod.label}</span>
-            {mod.id === "reminders" && (overdueReminders.length + todayReminders.length) > 0 && (
-              <span style={{ marginLeft: "auto", background: "#F87171", color: "#fff", fontSize: "0.6rem", fontWeight: 700, padding: "1px 6px", borderRadius: "10px" }}>{overdueReminders.length + todayReminders.length}</span>
-            )}
+            {mod.id === "reminders" && (overdueReminders.length + todayReminders.length) > 0 && <span style={{ marginLeft: "auto", background: "#F87171", color: "#fff", fontSize: "0.6rem", fontWeight: 700, padding: "1px 6px", borderRadius: "10px" }}>{overdueReminders.length + todayReminders.length}</span>}
             {mod.id !== "reminders" && messages[mod.id]?.length > 0 && <span style={{ marginLeft: "auto", width: "7px", height: "7px", borderRadius: "50%", background: mod.color }} />}
           </button>
         ))}
@@ -672,6 +716,8 @@ export default function REVOXAgent() {
     </div>
   );
 
+  const isSpecialModule = activeModule === "analytics" || activeModule === "closing";
+
   const ChatView = () => (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ padding: isMobile ? "12px 16px" : "14px 24px", borderBottom: "1px solid #1E2A3A", display: "flex", alignItems: "center", gap: "10px", background: "#0B0F1A", flexShrink: 0 }}>
@@ -692,10 +738,10 @@ export default function REVOXAgent() {
         </div>
       </div>
 
-      {/* Analytics module renders dashboard instead of chat */}
-      {activeModule === "analytics" ? (
-        <AnalyticsDashboard deals={deals} reminders={reminders} />
-      ) : (
+      {activeModule === "analytics" && <AnalyticsDashboard deals={deals} reminders={reminders} />}
+      {activeModule === "closing" && <ClosingDashboard deals={deals} onSendMessage={sendMessage} setActiveModule={setActiveModule} />}
+
+      {!isSpecialModule && (
         <>
           <div style={{ flex: 1, overflowY: "auto", padding: isMobile ? "16px 12px" : "24px", display: "flex", flexDirection: "column", gap: "14px" }}>
             {currentMessages.length === 0 && (
@@ -735,42 +781,4 @@ export default function REVOXAgent() {
               {(QUICK_ACTIONS[activeModule] || []).slice(0, 3).map((action, i) => (
                 <button key={i} onClick={() => sendMessage(action)} style={{ padding: "6px 12px", borderRadius: "20px", border: "1px solid #1E2A3A", background: "#141C2E", color: "#64748B", fontSize: "0.7rem", cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>{action}</button>
               ))}
-            </div>
-          )}
-          <div style={{ padding: isMobile ? "10px 12px 16px" : "16px 24px", borderTop: "1px solid #1E2A3A", background: "#0B0F1A", flexShrink: 0 }}>
-            <div style={{ display: "flex", gap: "8px", alignItems: "flex-end" }}>
-              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Ask REVOX…" rows={1}
-                style={{ flex: 1, padding: "12px 14px", borderRadius: "14px", border: "1px solid #1E2A3A", background: "#141C2E", color: "#E2E8F0", fontSize: "0.9rem", resize: "none", outline: "none", lineHeight: 1.5, fontFamily: "inherit" }}
-                onInput={e => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px"; }}
-                onFocus={e => e.target.style.borderColor = activeModuleData?.color}
-                onBlur={e => e.target.style.borderColor = "#1E2A3A"}
-              />
-              <button onClick={() => sendMessage()} disabled={!input.trim() || loading} style={{ width: "46px", height: "46px", borderRadius: "12px", border: "none", cursor: input.trim() && !loading ? "pointer" : "not-allowed", background: input.trim() && !loading ? `linear-gradient(135deg, ${activeModuleData?.color}, #4F8EF7)` : "#1E2A3A", color: "#fff", fontSize: "1.2rem", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {loading ? "…" : "↑"}
-              </button>
-            </div>
-            <div style={{ textAlign: "center", fontSize: "0.65rem", color: "#334155", marginTop: "8px" }}>REVOX · Powered by Claude · Biomedical Sales Intelligence · Tanzania</div>
-          </div>
-        </>
-      )}
-    </div>
-  );
-
-  return (
-    <div style={{ display: "flex", height: "100dvh", background: "#0B0F1A", fontFamily: "'Inter', system-ui, sans-serif", color: "#E2E8F0", overflow: "hidden" }}>
-      {!isMobile && <div style={{ width: "280px", minWidth: "280px", background: "#0F1422", borderRight: "1px solid #1E2A3A", display: "flex", flexDirection: "column" }}><SidebarContent /></div>}
-      {isMobile && view === "sidebar" && <div style={{ width: "100%", background: "#0F1422", display: "flex", flexDirection: "column" }}><SidebarContent /></div>}
-      {(!isMobile || view === "chat") && <ChatView />}
-      <style>{`
-        @keyframes pulse { 0%, 100% { opacity: 0.3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } }
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #1E2A3A; border-radius: 2px; }
-        textarea::placeholder, input::placeholder { color: #334155; }
-        select option { background: #0F1422; color: #E2E8F0; }
-        button:active { opacity: 0.8; }
-      `}</style>
-    </div>
-  );
-}
+            </di
